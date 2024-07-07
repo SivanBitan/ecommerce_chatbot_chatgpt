@@ -19,34 +19,7 @@ state = {
     "phone_number": None
 }
 
-# def extract_order_ids(user_input):
-#     # Regular expression to find phrases like "check order", "order status", etc.
-#     pattern = re.compile(r'\b(?:check|status|order)\b.*?\b(\d+)\b', re.IGNORECASE)
-#     matches = pattern.findall(user_input)
-#     return matches
-
-# def extract_user_details(user_input):
-#     doc = nlp(user_input)
-#     details = {}
-#     for ent in doc.ents:
-#         if ent.label_ == "PERSON":
-#             details["name"] = ent.text
-#         elif ent.label_ == "EMAIL":
-#             details["email"] = ent.text
-#         elif ent.label_ == "PHONE":
-#             details["phone"] = ent.text
-#     return details
-#
-#
-# def is_human_representative_request(user_input):
-#     doc = nlp(user_input.lower())
-#     keywords = {"human", "person", "representative", "agent", "someone"}
-#     request_phrases = {"talk to", "speak to", "need help from", "need assistance from", "answer me", "reply to me"}
-#
-#     words = {token.text for token in doc}
-#     if any(phrase in user_input.lower() for phrase in request_phrases) and keywords.intersection(words):
-#         return True
-#     return False
+context_flags = [False, False]
 
 
 def query_database():
@@ -61,6 +34,18 @@ def query_database():
 
     conn.close()
     return table1_results
+
+
+def validate_and_extract(details_str):
+    details_list = details_str.split(",")
+    full_name = details_list[0].strip()
+    phone_number = details_list[1].strip()
+    email = details_list[2].strip()
+
+    if not re.compile(r"[^@]+@[^@]+\.[^@]+").match(email):
+        email = "None"
+
+    return full_name, phone_number, email
 
 # def generate_prompt(user_input):
 #     table1_results = ""
@@ -92,40 +77,48 @@ def save_to_csv(full_name, email, phone_number):
         writer.writerow({'Full Name': full_name, 'Email': email, 'Phone Number': phone_number})
 
 def update_state(user_input, state):
-    # # Use GPT-3.5 to extract details
-    # details = client.chat.completions.create(
-    #     model="ft:gpt-3.5-turbo-0125:personal:rb:9gE63hlk",
-    #     messages=[
-    #         {"role": "system", "content": "Extract full name, email, and phone number from the user's response."},
-    #         {"role": "user", "content": user_input}
-    #     ]
-    # ).choices[0].message.content
 
-    prompt = f"""
-        The user should give you the following details: full name, email, and phone number. You need to extract this data from the user's input and format is like so (<full_name>, <email>, <phone_number>. If data is missing from the details, notify the user too, and in the formatted data put None where data is missing."
-        """
+
+    prompt = f"""ser Input: {user_input}\n\n
+        Extract the following details from the user's input: full name, email, and phone number. 
+        Your response should be formatted as: (<full_name>,<phone_number>,<email>).
+        If any data is missing, write None where it should've been in the format. Do not use 'John Doe' (and the likes of it) if it's not the user_input. If you got two words that look like a name and that's it, assume the user has given you only their full name. If the answer is nothing but numbers, assume the user has given you only their phone number. If the answer doesn't contain spaces and does contain @ assume the user has given you only their email."""
+
+
 
     details = client.chat.completions.create(
         model="ft:gpt-3.5-turbo-0125:personal:rb:9gE63hlk",
         messages=[
-            {"role": "system", "content": "You are a user details extraction assistant."},
+            {"role": "system", "content": "You are an assistant that extracts and formats user details accurately."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=10,
+        max_tokens=50,
         n=1,
         stop=None,
         temperature=0.5,
     )
+    print(details)
 
 
     # Parsing the details
-    for line in details.split('\n'):
-        if "full name" in line.lower():
-            state['full_name'] = line.split(":")[-1].strip()
-        elif "email" in line.lower():
-            state['email'] = line.split(":")[-1].strip()
-        elif "phone number" in line.lower():
-            state['phone_number'] = line.split(":")[-1].strip()
+
+    details = details.choices[0].message.content
+    if "Output" in details:
+        details = details[9:-1]
+    else:
+        details = details[1:-1]
+    print(f"after trim: {details}")
+
+    full_name, phone_number, email = validate_and_extract(details)
+    if "None" not in full_name and validate_full_name(full_name):
+        state["full_name"] = full_name
+    if "None" not in phone_number:
+        state["phone_number"] = phone_number
+    if "None" not in email:
+        state["email"] = email
+
+
+
 
 def validate_full_name(name):
     return len(name.split()) > 1
@@ -133,32 +126,24 @@ def validate_full_name(name):
 def generate_details_prompt(state):
     if not state['full_name']:
         return "Please provide your full name."
-    elif not state['email']:
+    elif "None" in state['full_name']:
+        return "Please provide your full name."
+    elif not state['email'] or "None" in state['email']:
         return "Please provide your email address."
-    elif not state['phone_number']:
+    elif not state['phone_number'] or "None" in state['phone_number']:
         return "Please provide your phone number."
     else:
         return None
 
 def chatbot_response(user_input):
     """This response is entirly chatgpt-3.5-turbo fine-tuned """
-    # if is_human_representative_request(user_input):
-    #     return "Sure. I'll take your details so that someone can reach out to you. Please provide your contact details below."
-    #
-    # prompt = generate_prompt(user_input)
-    # response = client.chat.completions.create(
-    #     model="ft:gpt-3.5-turbo-0125:personal:rb:9gE63hlk",
-    #     messages=[
-    #         {"role": "user", "content": prompt},
-    #     ],
-    #     temperature=0,
-    # )
-    # return response.choices[0].message.content
 
     # Classify the user input to determine the intent
     intent = classify_intent(user_input)
 
-    if intent == "Intent: check_order_status":
+    if intent == "Intent: check_order_status" or intent == "check_order_status" or ("only_numbers" in intent and context_flags[0]==True) or ("order_id" in intent and context_flags[0]==True):
+        context_flags[0] = True
+        context_flags[1] = False
         table1_results = ""
         cnt = 0
         for x, y in query_database():
@@ -167,16 +152,18 @@ def chatbot_response(user_input):
         prompt = f"""
             User query: {user_input}\n\nIf a user asks to check an order or an order status, you ask them kindly for the order ID, unless they already gave it to you. Upon receiving an order ID of 5 numbers (or if you already received it while they were asking you), you should answer according to the following orders table: \n{table1_results}\nIf you didn't find the order ID, notify the user.
             """
+        print(prompt)
 
-    elif intent == "Intent: request_human_representative":
+    elif intent == "Intent: request_human_representative" or intent == "request_human_representative" or "book_appointmen"in intent:
+        context_flags[0] = False
+        context_flags[1] = True
         prompt = f"""
                         User query: {user_input}\n\nIf a user asks for a human representative you ask for their phone, email, and full name. 
                         """
 
-    elif intent == "Intent: personal_details_for_human_representative_request":
+    elif intent == "Intent: personal_details_for_human_representative_request" or intent == "personal_details_for_human_representative_request" or "name" in intent or "email" in intent or ("only_numbers" in intent and context_flags[1]==True):
+        print(context_flags)
         update_state(user_input, state)
-        if state['full_name'] and not validate_full_name(state['full_name']):
-            state['full_name'] = None  # Reset full name if not valid
 
         prompt = generate_details_prompt(state)
         if not prompt:
@@ -184,12 +171,16 @@ def chatbot_response(user_input):
             with open('user_details.csv', 'w', newline='') as csvfile:
                 fieldnames = ['full_name', 'email', 'phone_number']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
+                # writer.writeheader()
                 writer.writerow(state)
             return "Thank you! Your details have been saved successfully."
+        else:
+            return prompt
 
 
     else:
+        context_flags[0] = False
+        context_flags[1] = False
         prompt = f"User query: {user_input}\n\nIntent: other. Please assist the user accordingly."
 
     response = client.chat.completions.create(
@@ -242,8 +233,10 @@ def classify_intent(user_input):
     prompt = f"""
     Classify the intent of the following user input:
     Input: "{user_input}"
-    Intent options: [request_human_representative, personal_details_for_human_representative_request, check_order_status, other]
+    Intent options: [only_numbers, only_order_id, only_email, only_name, request_human_representative, personal_details_for_human_representative_request, check_order_status, other]
+    Don't pay attention to exclamation marks.
     Intent:
+    
     """
 
     response = client.chat.completions.create(
@@ -261,34 +254,44 @@ def classify_intent(user_input):
     classification = response.choices[0].message.content
     return classification
 
-# test_inputs = [
-#     "My phone is 1234873246, my email is sdf@dsfg.com and my name is Martha Peskety.",
-#     "My phone is 5555555555",
-#     "my email is vxciov@tryuitr.com and my name is Lincoln Junior.",
-#     "Email: sdfghf@rityrpoed.com, Phone: 4569330953, Name: Stanley",
-#     "name: luise phone:0546667899 mail:lula@loolie.com",
-#     "What is the weather today?",
-#     "Order me a pizza.",
-#     "Book an appointment for me."
-# ]
-#
-# for input_str in test_inputs:
-#     print(f"'{input_str}' -> {classify_intent(input_str)}")
+test_inputs = [
+    "My phone is 1234873246, my email is sdf@dsfg.com and my name is Martha Peskety.",
+    "My phone is 5555555555",
+    "my email is vxciov@tryuitr.com and my name is Lincoln Junior.",
+    "Email: sdfghf@rityrpoed.com, Phone: 4569330953, Name: Stanley",
+    "name: luise phone:0546667899 mail:lula@loolie.com",
+    "I'd Like to check my order ID",
+    "Lucas Clearwood",
+    "0923457659",
+      "5555555555",
+    "54321",
+    "5a41d2SQ9",
+    "rick125@boosters.com",
+    "Book an appointment for me.",
+    "please check the status for order ID 67890",
+    "check my order",
+    "Oh, that's right. It's 12345",
+    "Oh, you are correct! It's 67890",
+    "Oh! I didn't even notice! the email is w34gkh@gd89sxcgn.com"
+]
+
+for input_str in test_inputs:
+    print(f"'{input_str}' -> {classify_intent(input_str)}")
 
 def is_human_representative_request(user_input):
     classification = classify_intent(user_input)
-    return classification == "Intent: personal_details_for_human_representative_request"
+    return "personal_details_for_human_representative_request" in classification
 
 # # Test the function
 # for input_str in test_inputs:
 #     print(f"'{input_str}' -> {is_human_representative_request(input_str)}")
 
 
-# Example usage:
-user_input = input("User: ")
-while True:
-    bot_response = chatbot_response(user_input)
-    print("Bot:", bot_response)
-    if "Thank you! Your details have been saved successfully." in bot_response:
-        break
-    user_input = input("User: ")
+# # Example usage:
+# user_input = input("User: ")
+# while True:
+#     bot_response = chatbot_response(user_input)
+#     print("Bot:", bot_response)
+#     if "Thank you! Your details have been saved successfully." in bot_response:
+#         break
+#     user_input = input("User: ")
