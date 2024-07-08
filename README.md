@@ -6,7 +6,8 @@ This project demonstrates a simple chatbot integrated with a database to handle 
 
 - Check the status of an order by providing the order ID.
 - Request human assistance by providing full name, email address, and phone number.
-- Stores and retrieves data from a SQLite database.
+- Get information about the store's return policy by asking about it.
+- Stores and retrieves orders data from a SQLite database.
 
 ## Setup
 
@@ -35,11 +36,7 @@ This project demonstrates a simple chatbot integrated with a database to handle 
 
 
 ### Testing
-Run the unit tests:
-```bash
-   python -m unittest discover -s tests
-   ```
-
+Unit-testing is avalable for the chatbot and its database in files **test-chatbot.py** and **test-database.py** under folder tests.
 
 ### License
 This project is licensed under the MIT License.
