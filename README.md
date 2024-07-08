@@ -36,7 +36,7 @@ This project demonstrates a simple chatbot integrated with a database to handle 
 
 
 ### Testing
-Unit-testing is avalable for the chatbot and its database in files **test-chatbot.py** and **test-database.py** under folder tests.
+Unit-testing is available for the chatbot and its database in files tests/**test-chatbot.py** and tests/**test-database.py**.
 
 ### License
 This project is licensed under the MIT License.
