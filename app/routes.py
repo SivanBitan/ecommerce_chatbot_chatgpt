@@ -1,5 +1,5 @@
-from flask import request, jsonify, render_template, session
-from chatbot import chatbot_response, save_to_csv, extract_order_ids, extract_user_details, check_order_status, handle_service_request
+from flask import request, render_template
+from chatbot import chatbot_response
 from __init__ import create_app
 
 app = create_app()

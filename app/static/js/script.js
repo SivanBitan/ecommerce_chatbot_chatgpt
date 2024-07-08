@@ -1,29 +1,30 @@
 function getBotResponse() {
+    // get the response from the bot and post it
     var rawText = $("#textInput").val();
     var userHtml = '<p class="userText"><span>' + rawText + "</span></p>";
     $("#textInput").val("");
     $("#chatbox").append(userHtml);
     document.getElementById("userInput").scrollIntoView({ block: "start", behavior: "smooth" });
-
     $.get("/get", { msg: rawText }).done(function (data) {
         var botHtml = '<p class="botText"><span>' + data + "</span></p>";
         $("#chatbox").append(botHtml);
         document.getElementById("userInput").scrollIntoView({ block: "start", behavior: "smooth" });
-
-        // Check if the response contains the specific message for contact details
-        if (data.includes("Please provide your contact details below.")) {
-            $("#contactInput").show();
-            document.getElementById("contactInput").scrollIntoView({ block: "end", behavior: "smooth" });
-        }
+// This is the form version's if
+//        // Check if the response contains the specific message for contact details
+//        if (data.includes("Please provide your contact details below.")) {
+//            $("#contactInput").show();
+//            document.getElementById("contactInput").scrollIntoView({ block: "end", behavior: "smooth" });
+//        }
     }).fail(function() {
+        // Handle errors in communication with the server
         console.error("Error: Unable to get response from server");
     });
 }
 
 $("#textInput").keypress(function (e) {
-    console.log("Key pressed: " + e.which);  // Debugging statement
+    console.log("Key pressed: " + e.which);  // Debugging statement to monitor the pressed button
     if (e.which == 13) {
-        getBotResponse();
+        getBotResponse(); // call "/get" and show results
     }
 });
 //
