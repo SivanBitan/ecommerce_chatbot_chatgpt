@@ -8,6 +8,7 @@ This project demonstrates a simple chatbot integrated with a database to handle 
 - Request human assistance by providing full name, email address, and phone number.
 - Get information about the store's return policy by asking about it.
 - Stores and retrieves orders data from a SQLite database.
+- Receive fine-tuned and prompt engineered prompts which are generated though OpenAI API chatgpt-3.5-turbo
 
 ## Setup
 
@@ -15,6 +16,8 @@ This project demonstrates a simple chatbot integrated with a database to handle 
 
 - Python 3.10
 - Flask
+
+You can install required libraries through the **requirements.txt** file
 
 ### How to run
 1. Run the application:
