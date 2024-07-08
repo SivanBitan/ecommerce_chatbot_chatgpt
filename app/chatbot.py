@@ -318,10 +318,6 @@ def classify_intent(user_input):
     return classification
 
 
-print(classify_intent("my email is vxciov@tryuitr.com and my name is Lincoln Junior."))
-# print(chatbot_response("can you check the status of order ID 12345"))
-# print("Shipped" in "The order ID 12345 is **Shipped**.")
-
 # # Example usage:
 # user_input = input("User: ")
 # while True:
