@@ -159,7 +159,8 @@ def chatbot_response(user_input):
                     
                     
                     You must answer according to the table only. Do not answer without providing the status unless the order is not found.
-                
+                    Always inform the user how many digits were received.
+                    
                     Instructions for checking an order status:
                     1. **Extracting Order ID:**
                        - If the user provides an order ID, extract it. Add the order ID you've extracted to your response.
@@ -167,7 +168,7 @@ def chatbot_response(user_input):
                        
                     2. **Validating Order ID:**
                        - Ensure the order ID is exactly 5 digits long. Not shorter, not longer. Spaces and letters are not digits.
-                       - If the order ID is not a 5-digit number, notify the user that the order ID must be a 5-digit number.
+                       - If the order ID is not a 5-digit number, print out how many digits of order ID you've found and notify the user that the order ID must be a 5-digit number.
                     
                     3. **Checking Order ID in the Table:**
                        - If a valid 5-digit order ID is received:
@@ -284,7 +285,7 @@ def classify_intent(user_input):
     Classify the intent of the following user input:
     Input: "{user_input}"
     Intent options: [general_policy, non_returnables_policy, can't_return_policy, cannot_return_policy, refund_method_policy, only_numbers, phone_number, only_order_id, only_email, only_name, request_human_representative, personal_details_for_human_representative_request, check_order_status, other]
-    Don't pay attention to exclamation marks.
+    Don't pay attention to exclamation marks. "Hi" is not related to general_policy.
     Do not add other classifications which are not in the Intent options listed. The format for your response is one of these Intent options exactly as written without any additions/modifications.
     Intent:
     
@@ -317,12 +318,13 @@ def classify_intent(user_input):
 
     return classification
 
+# print(classify_intent("hi"))
 
-# # Example usage:
-# user_input = input("User: ")
-# while True:
-#     bot_response = chatbot_response(user_input)
-#     print("Bot:", bot_response)
-#     if "Thank you! Your details have been saved successfully." in bot_response:
-#         break
-#     user_input = input("User: ")
+# Example usage:
+user_input = input("User: ")
+while True:
+    bot_response = chatbot_response(user_input)
+    print("Bot:", bot_response)
+    if "Thank you! Your details have been saved successfully." in bot_response:
+        break
+    user_input = input("User: ")
